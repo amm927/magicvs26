@@ -49,9 +49,8 @@
             Cerrar sesión
           </button>
 
-            <div class="user-block flex items-center gap-2">
-              <span class="display-name text-sm font-bold text-zinc-100 leading-4 truncate">{{ displayName }}</span>
-              <span class="friend-tag text-xs text-zinc-500 opacity-80">#{{ friendTag }}</span>
+            <div class="user-block inline-flex items-baseline gap-0">
+              <span class="display-name text-sm font-bold text-zinc-100 leading-4 truncate mr-0">{{ displayName }}</span><span class="friend-tag text-xs text-zinc-500 opacity-80 ml-0">#{{ friendTag }}</span>
             </div>
 
           <a class="p-2 rounded-full hover:bg-zinc-800/50 transition-all duration-300 text-zinc-400 hover:text-purple-400" routerLink="/profile/me" aria-label="Ir al perfil">
@@ -62,8 +61,7 @@
         <div class="md:hidden flex items-center gap-3 w-full">
           <button class="px-3 py-1 rounded bg-zinc-800 text-zinc-200" (click)="logout()">Salir</button>
           <div class="flex-1 text-center">
-            <div class="text-sm font-bold text-zinc-100 truncate">{{ displayName }}</div>
-            <div class="text-xs text-zinc-500 truncate">#{{ friendTag }}</div>
+            <span class="text-sm font-bold text-zinc-100 truncate mr-0">{{ displayName }}</span><span class="text-xs text-zinc-500 truncate ml-0">#{{ friendTag }}</span>
           </div>
           <a class="p-2 rounded-full hover:bg-zinc-800/50 transition-all duration-300 text-zinc-400 hover:text-purple-400" routerLink="/profile/me" aria-label="Ir al perfil">
             <span class="material-symbols-outlined text-2xl">account_circle</span>

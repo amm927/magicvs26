@@ -6,9 +6,11 @@ public final class ValidationUtils {
 
     private ValidationUtils() {}
 
-    private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9_-]{3,30}$");
+    // allow letters, numbers, spaces, underscore and hyphen (3-30 chars)
+    private static final Pattern USERNAME = Pattern.compile("^[A-Za-z0-9 _-]{3,30}$");
     private static final Pattern EMAIL = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final Pattern PASSWORD = Pattern.compile("^(?=.{8,12}$)(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).*$");
+    private static final Pattern DISPLAYNAME = Pattern.compile("^[\\p{L}0-9_-]{1,50}$");
 
     public static boolean isValidUsername(String username) {
         if (username == null) return false;
@@ -27,6 +29,11 @@ public final class ValidationUtils {
 
     public static boolean isUsernameOrEmail(String s) {
         return isValidUsername(s) || isValidEmail(s);
+    }
+
+    public static boolean isValidDisplayName(String name) {
+        if (name == null) return false;
+        return DISPLAYNAME.matcher(name).matches();
     }
 
     public static String sanitizeDisplayName(String input) {

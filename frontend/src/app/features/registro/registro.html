@@ -10,6 +10,7 @@
           type="text"
           name="username"
           [(ngModel)]="username"
+          (input)="onInputChange()"
           class="w-full h-10 rounded-md bg-surface-container/80 border border-outline-variant/40 px-3 text-sm text-zinc-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
           placeholder="Nombre de usuario"
           required
@@ -22,8 +23,9 @@
           type="email"
           name="email"
           [(ngModel)]="email"
+          (input)="onInputChange()"
           class="w-full h-10 rounded-md bg-surface-container/80 border border-outline-variant/40 px-3 text-sm text-zinc-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-          placeholder="tu@email.com"
+          placeholder="magicvs@gmail.com"
           required
         />
       </div>
@@ -34,6 +36,7 @@
           type="password"
           name="password"
           [(ngModel)]="password"
+          (input)="onInputChange()"
           class="w-full h-10 rounded-md bg-surface-container/80 border border-outline-variant/40 px-3 text-sm text-zinc-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
           placeholder="••••••••"
           required
@@ -46,13 +49,15 @@
           type="text"
           name="displayName"
           [(ngModel)]="displayName"
+          (input)="onInputChange()"
           class="w-full h-10 rounded-md bg-surface-container/80 border border-outline-variant/40 px-3 text-sm text-zinc-100 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-          placeholder="Tu nombre para mostrar"
+          placeholder="Magicvs the Great"
         />
       </div>
 
-      <button type="submit" class="w-full arcane-gradient py-3 rounded-md font-bold text-on-primary mt-4">
-        Registrarme
+      <button type="submit" [disabled]="loading" class="w-full arcane-gradient py-3 rounded-md font-bold text-on-primary mt-4">
+        <span *ngIf="!loading">Registrarme</span>
+        <span *ngIf="loading">Registrando...</span>
       </button>
 
       <p *ngIf="message" class="text-emerald-400 text-sm mt-4 text-center">{{ message }}</p>

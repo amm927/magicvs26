@@ -1,6 +1,7 @@
 export function isValidUsername(username: string): boolean {
   if (!username) return false;
-  const re = /^[A-Za-z0-9_-]{3,30}$/;
+  // allow letters, numbers, spaces, underscore and hyphen (3-30 chars)
+  const re = /^[A-Za-z0-9 _-]{3,30}$/;
   return re.test(username);
 }
 
@@ -28,6 +29,13 @@ export function sanitizeDisplayName(input: string | null | undefined): string {
   // allow letters, numbers, spaces, underscore and hyphen
   const cleaned = stripped.replace(/[^\p{L}0-9 _-]/gu, '');
   return cleaned.trim().slice(0, 50);
+}
+export function isValidDisplayName(name: string | null | undefined): boolean {
+  if (!name) return false;
+  // disallow spaces in display name (apodo). Allow letters, numbers, underscore and hyphen.
+  // use unicode letter class for international names
+  const re = /^[\p{L}0-9_-]{1,50}$/u;
+  return re.test(name);
 }
 
 export function containsMaliciousPayload(s: string | null | undefined): boolean {

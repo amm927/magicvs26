@@ -5,7 +5,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { finalize, timeout } from 'rxjs/operators';
 import { ChangeDetectorRef, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
-import { isUsernameOrEmail } from '../../shared/validation';
+import { isValidEmail } from '../../shared/validation';
 
 @Component({
   selector: 'app-login',
@@ -37,8 +37,9 @@ export class Login {
     const usernameOrEmailTrimmed = this.usernameOrEmail.trim();
     const passwordTrimmed = this.password.trim();
 
-    if (!isUsernameOrEmail(usernameOrEmailTrimmed)) {
-      this.error = 'Introduce un nombre de usuario válido o un correo válido.';
+    // Only allow login via email (not username)
+    if (!isValidEmail(usernameOrEmailTrimmed)) {
+      this.error = 'Introduce un correo válido.';
       return;
     }
 

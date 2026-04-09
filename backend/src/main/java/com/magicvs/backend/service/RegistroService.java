@@ -42,6 +42,13 @@ public class RegistroService {
             throw new IllegalArgumentException("Entrada sospechosa detectada");
         }
 
+        // Validate displayName (apodo): disallow spaces and special characters
+        if (displayName != null && !displayName.isBlank()) {
+            if (!ValidationUtils.isValidDisplayName(displayName)) {
+                throw new IllegalArgumentException("Nombre visible inválido. El apodo no puede contener espacios ni caracteres especiales");
+            }
+        }
+
         if (registroRepository.existsByUsername(normalizedUsername)) {
             throw new IllegalArgumentException("El nombre de usuario ya está en uso");
         }

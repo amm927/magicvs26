@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { isValidUsername, isValidEmail, isValidPassword, sanitizeDisplayName, containsMaliciousPayload } from '../../shared/validation';
+import { finalize } from 'rxjs/operators';
+import { ChangeDetectorRef, NgZone } from '@angular/core';
+import { isValidUsername, isValidEmail, isValidPassword, sanitizeDisplayName, containsMaliciousPayload, isValidDisplayName } from '../../shared/validation';
 
 @Component({
   selector: 'app-registro',
@@ -18,10 +20,11 @@ export class Registro {
   displayName = '';
   message: string | null = null;
   error: string | null = null;
+  loading = false;
 
   private readonly apiUrl = 'http://localhost:8080/api/users/register';
 
-  constructor(private http: HttpClient, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private cdr: ChangeDetectorRef, private ngZone: NgZone) {}
 
   onSubmit(): void {
     this.message = null;
@@ -29,7 +32,7 @@ export class Registro {
 
     // Frontend validation
     if (!isValidUsername(this.username)) {
-      this.error = 'Usuario inválido. Solo letras, números, guion bajo o guion medio (3-30 caracteres).';
+      this.error = 'Usuario inválido. Solo letras, números, espacios, guion bajo o guion medio (3-30 caracteres).';
       return;
     }
     if (!isValidEmail(this.email)) {
@@ -47,6 +50,13 @@ export class Registro {
 
     const safeDisplay = sanitizeDisplayName(this.displayName);
 
+    // validate displayName (apodo) - do not allow spaces
+    if (safeDisplay && !isValidDisplayName(safeDisplay)) {
+      this.error = 'Nombre visible inválido. El apodo no puede contener espacios ni caracteres especiales.';
+      return;
+    }
+
+    this.loading = true;
     this.http
       .post<UserResponse>(this.apiUrl, {
         username: this.username,
@@ -54,23 +64,60 @@ export class Registro {
         password: this.password,
         displayName: safeDisplay,
       })
+      .pipe(
+        finalize(() => {
+          this.ngZone.run(() => {
+            this.loading = false;
+            this.cdr.detectChanges();
+          });
+        })
+      )
       .subscribe({
         next: (user) => {
-          this.message = `Cuenta creada. Bienvenido, ${user.displayName ?? user.username}!`;
-          if (user.token) {
-            localStorage.setItem('token', user.token);
-          }
-          localStorage.setItem('user', JSON.stringify(user));
-          this.router.navigateByUrl('/');
+          this.ngZone.run(() => {
+            this.message = `Cuenta creada. Bienvenido, ${user.displayName ?? user.username}!`;
+            if (user.token) {
+              localStorage.setItem('token', user.token);
+            }
+            localStorage.setItem('user', JSON.stringify(user));
+            this.cdr.detectChanges();
+            this.router.navigateByUrl('/');
+          });
         },
         error: (err: HttpErrorResponse) => {
-          if (err.status === 400) {
-            this.error = err.error?.message ?? 'Datos inválidos o ya existentes';
-          } else {
-            this.error = 'Error al conectar con el servidor';
-          }
+          this.ngZone.run(() => {
+            // Prefer backend message when available
+            const backendMsg = err.error?.message || err.error?.error || err.error?.detail || null;
+            if (err.status === 400) {
+              if (backendMsg) {
+                // map some known backend messages to friendlier texts
+                const lower = backendMsg.toLowerCase();
+                if (lower.includes('email') && lower.includes('en uso')) {
+                  this.error = 'El correo ya está registrado.';
+                } else if (lower.includes('nombre de usuario') && lower.includes('en uso')) {
+                  this.error = 'El nombre de usuario ya está en uso.';
+                } else {
+                  this.error = backendMsg;
+                }
+              } else {
+                this.error = 'Datos inválidos o ya existentes';
+              }
+            } else if (err.status === 409) {
+              this.error = backendMsg ?? 'Recurso en conflicto';
+            } else if (err.status === 0) {
+              this.error = 'No se ha podido conectar con el servidor';
+            } else {
+              this.error = 'Error al conectar con el servidor';
+            }
+            this.cdr.detectChanges();
+          });
         },
       });
+  }
+
+  onInputChange(): void {
+    this.error = null;
+    this.message = null;
   }
 }
 
