@@ -1,7 +1,7 @@
 package com.magicvs.backend.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.magicvs.backend.model.*;
 import com.magicvs.backend.repository.*;
 import org.slf4j.Logger;
@@ -12,6 +12,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
+import java.net.URI;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -50,7 +51,7 @@ public class ScryfallService {
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
         if (cardRepository.count() == 0) {
-            logger.info("Base de datos de cartas vacía. Iniciando importación automática de Standard...");
+            logger.info("Base de datos de cartas vacía. Iniciando importación automática de Standard (Solo Español)...");
             importStandardCards();
             logger.info("Importación automática completada.");
         } else {
@@ -63,7 +64,7 @@ public class ScryfallService {
      */
     @Transactional
     public int importStandardCards() {
-        String url = SCRYFALL_API_BASE + "/cards/search?q=f:standard";
+        String url = SCRYFALL_API_BASE + "/cards/search?q=f:standard+lang:es";
         return fetchAndSaveAll(url);
     }
 
@@ -108,7 +109,7 @@ public class ScryfallService {
         while (nextUrl != null) {
             try {
                 logger.info("Fetching cards from: {}", nextUrl);
-                JsonNode response = restTemplate.getForObject(nextUrl, JsonNode.class);
+                JsonNode response = restTemplate.getForObject(URI.create(nextUrl), JsonNode.class);
                 if (response == null || !response.has("data")) {
                     break;
                 }
@@ -238,7 +239,7 @@ public class ScryfallService {
         // Eliminar existentes para este card
         cardLegalityRepository.deleteByCard(card);
         
-        Iterator<Map.Entry<String, JsonNode>> fields = legalitiesNode.fields();
+        Iterator<Map.Entry<String, JsonNode>> fields = legalitiesNode.properties().iterator();
         while (fields.hasNext()) {
             Map.Entry<String, JsonNode> entry = fields.next();
             CardLegality legality = new CardLegality();
