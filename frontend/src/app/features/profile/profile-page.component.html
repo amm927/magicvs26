@@ -13,12 +13,12 @@
       </div>
 
       @if (showPrivateDetails()) {
-        <button (click)="logout()" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-zinc-200 transition-colors hover:bg-red-500/20 hover:text-red-300">
+        <button (click)="logout()" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-zinc-200 transition-colors hover:bg-red-500/20 hover:text-red-300">
           <span class="material-symbols-outlined text-sm">logout</span>
           Cerrar sesión
         </button>
       } @else {
-        <a routerLink="/" class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-zinc-200 transition-colors hover:bg-white/10">
+        <a routerLink="/" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs font-bold uppercase tracking-[0.3em] text-zinc-200 transition-colors hover:bg-white/10">
           <span class="material-symbols-outlined text-sm">arrow_back</span>
           Volver
         </a>
