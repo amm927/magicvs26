@@ -28,6 +28,19 @@ export class ProfileHeaderComponent implements OnInit, OnChanges {
   isEditing = signal(false);
   isSaving = signal(false);
 
+  // Password Change Modal states
+  isPasswordModalOpen = signal(false);
+  isDeleteModalOpen = signal(false);
+  isSuccessModalOpen = signal(false);
+  oldPassword = signal('');
+  newPassword = signal('');
+  confirmPassword = signal('');
+  showOldPassword = signal(false);
+  showNewPassword = signal(false);
+  showConfirmPassword = signal(false);
+  passwordError = signal<string | null>(null);
+  isChangingPassword = signal(false);
+
   // Buffer for editing
   editData = signal<Partial<ProfileResponse>>({});
 
@@ -171,18 +184,110 @@ export class ProfileHeaderComponent implements OnInit, OnChanges {
     this.isEditing.set(false);
   }
 
+  toggleDeleteModal(): void {
+    this.isDeleteModalOpen.update(v => !v);
+  }
+
+  confirmDeleteAccount(): void {
+    this.isSaving.set(true);
+    this.profileService.deleteAccount().subscribe({
+      next: () => {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('authToken');
+        window.location.href = '/';
+      },
+      error: (err) => {
+        this.isSaving.set(false);
+        this.toggleDeleteModal();
+        console.error('Error al eliminar la cuenta:', err);
+        alert('Hubo un error al eliminar tu cuenta. Por favor, inténtalo de nuevo.');
+      }
+    });
+  }
+
+  togglePasswordModal(): void {
+    this.isPasswordModalOpen.update(v => !v);
+    if (!this.isPasswordModalOpen()) {
+      this.resetPasswordForm();
+    }
+  }
+
+  toggleVisibility(field: string): void {
+    if (field === 'old') this.showOldPassword.update(v => !v);
+    if (field === 'new') this.showNewPassword.update(v => !v);
+    if (field === 'confirm') this.showConfirmPassword.update(v => !v);
+  }
+
+  resetPasswordForm(): void {
+    this.oldPassword.set('');
+    this.newPassword.set('');
+    this.confirmPassword.set('');
+    this.passwordError.set(null);
+    this.showOldPassword.set(false);
+    this.showNewPassword.set(false);
+    this.showConfirmPassword.set(false);
+  }
+
+  submitPasswordChange(): void {
+    if (this.newPassword() !== this.confirmPassword()) {
+      this.passwordError.set('Las contraseñas nuevas no coinciden');
+      return;
+    }
+
+    if (this.newPassword().length < 8) {
+      this.passwordError.set('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+
+    this.isChangingPassword.set(true);
+    this.passwordError.set(null);
+
+    this.profileService.changePassword(this.oldPassword(), this.newPassword()).subscribe({
+      next: () => {
+        this.isChangingPassword.set(false);
+        this.togglePasswordModal();
+        this.isSuccessModalOpen.set(true);
+      },
+      error: (err) => {
+        this.isChangingPassword.set(false);
+        const msg = err.error?.message || 'Error al cambiar la contraseña. Verifica que la actual sea correcta.';
+        this.passwordError.set(msg);
+      }
+    });
+  }
+
   saveChanges(): void {
     this.isSaving.set(true);
     this.profileService.updateProfile(this.editData()).subscribe({
       next: (updated) => {
+        // Persist to localStorage for navbar and other components
+        const rawUser = localStorage.getItem('user');
+        if (rawUser) {
+          const user = JSON.parse(rawUser);
+          const updatedUser = {
+            ...user,
+            displayName: updated.displayName,
+            avatarUrl: updated.avatarUrl,
+            friendTag: updated.friendTag
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+
         this.profile = updated;
         this.profileSignal.set(updated);
         this.profileUpdated.emit(updated);
+        
+        // Notify the service for real-time sync across components
+        this.profileService.notifyProfileUpdate(updated);
+        
         this.isSaving.set(false);
         this.isEditing.set(false);
       },
-      error: () => {
+      error: (err) => {
         this.isSaving.set(false);
+        console.error('Error al guardar el perfil:', err);
+        alert('Hubo un error al guardar los cambios. Por favor, inténtalo de nuevo.');
       }
     });
   }

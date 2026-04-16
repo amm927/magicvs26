@@ -1,14 +1,17 @@
 package com.magicvs.backend.service;
 
+import com.magicvs.backend.dto.ChangePasswordDto;
 import com.magicvs.backend.dto.ProfileResponseDto;
 import com.magicvs.backend.dto.UpdateProfileDto;
 import com.magicvs.backend.dto.UserDeckSummaryDto;
-import com.magicvs.backend.model.User;
 import com.magicvs.backend.model.Deck;
 import com.magicvs.backend.model.DeckCard;
+import com.magicvs.backend.model.User;
 import com.magicvs.backend.repository.RegistroRepository;
 import com.magicvs.backend.repository.DeckRepository;
+import com.magicvs.backend.util.ValidationUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -61,6 +64,41 @@ public class UserProfileService {
         User saved = registroRepository.save(user);
 
         return toProfileResponse(saved, deckRepository.countByUserId(userId));
+    }
+
+    @Transactional
+    public void deleteAccount(String authorization) {
+        Long userId = extractUserIdFromAuthorization(authorization);
+        
+        // 1. Delete associated data (Decks)
+        deckRepository.deleteByUserId(userId);
+        
+        // 2. Delete User
+        registroRepository.deleteById(userId);
+    }
+
+    @Transactional
+    public void changePassword(String authorization, ChangePasswordDto dto) {
+        Long userId = extractUserIdFromAuthorization(authorization);
+        User user = registroRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+        // 1. Verify old password
+        if (!encoder.matches(dto.getOldPassword(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La contraseña actual es incorrecta");
+        }
+
+        // 2. Validate new password strength
+        if (!ValidationUtils.isValidPassword(dto.getNewPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La nueva contraseña no cumple los requisitos de seguridad");
+        }
+
+        // 3. Update and Save
+        user.setPasswordHash(encoder.encode(dto.getNewPassword()));
+        user.setUpdatedAt(java.time.LocalDateTime.now());
+        registroRepository.save(user);
     }
 
     public List<UserDeckSummaryDto> getDecksByUserId(Long userId) {

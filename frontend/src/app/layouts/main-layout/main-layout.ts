@@ -1,7 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
-import { NgIf } from '@angular/common';
 import { filter } from 'rxjs/operators';
+import { ProfileService, ProfileResponse } from '../../features/profile/profile.service';
 
 interface StoredUser {
   id: number;
@@ -15,7 +15,7 @@ interface StoredUser {
 
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgIf],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss',
 })
@@ -34,9 +34,17 @@ export class MainLayout {
     { name: 'Verde', code: 'G', color: '00733e' }
   ];
 
+  private readonly profileService = inject(ProfileService);
+
   constructor(private router: Router) {
     this.isLoggedIn = !!localStorage.getItem('user');
     this.loadUserFromStorage();
+
+    // Listen to real-time updates from ProfileService
+    this.profileService.profileUpdated$.subscribe((updated: ProfileResponse) => {
+      this.isLoggedIn = !!localStorage.getItem('user');
+      this.loadUserFromStorage();
+    });
 
     // Re-check login state after every navigation (e.g. after login redirects to /)
     this.router.events
