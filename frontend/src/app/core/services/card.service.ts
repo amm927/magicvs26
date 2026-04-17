@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Card } from '../../models/card.model';
@@ -19,17 +19,11 @@ export class CardService {
 
   constructor(private http: HttpClient) {}
 
-  getCards(page: number, name: string = ''): Observable<CardPage> {
-  let params = new HttpParams()
-    .set('page', page.toString())
-    .set('size', name ? '100' : '20'); // Si hay nombre, pedimos más cantidad para que parezca "total"
-
-  if (name) {
-    params = params.set('name', name);
+  getCards(page = 0, size = 20): Observable<CardPage> {
+    return this.http.get<any>(`${this.apiUrl}/list?page=${page}&size=${size}`).pipe(
+      map(response => this.mapResponseToCardPage(response, page, size))
+    );
   }
-
-  return this.http.get<CardPage>(`${this.apiUrl}`, { params });
-}
 
   getCardById(id: string): Observable<Card> {
     return this.http.get<any>(`${this.apiUrl}/${id}`).pipe(
