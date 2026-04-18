@@ -27,6 +27,7 @@ export interface Deck {
   format: string;
   isPublic: boolean;
   totalCards?: number;
+  mainImageUrl?: string;
   cards: DeckCard[];
 }
 

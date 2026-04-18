@@ -22,6 +22,7 @@ public class DeckResponseDTO {
     private List<DeckCardResponseDTO> cards;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String mainImageUrl;
 
     public static class DeckCardResponseDTO {
         private Long cardId;
@@ -108,6 +109,7 @@ public class DeckResponseDTO {
         dto.setIsPublic(deck.getPublic());
         dto.setCreatedAt(deck.getCreatedAt());
         dto.setUpdatedAt(deck.getUpdatedAt());
+        dto.setMainImageUrl(calculateMainImageUrl(deck));
         
         List<DeckCardResponseDTO> cardDtos = deck.getCards().stream()
             .map(deckCard -> {
@@ -129,6 +131,33 @@ public class DeckResponseDTO {
         
         dto.setCards(cardDtos);
         return dto;
+    }
+
+    private static String calculateMainImageUrl(Deck deck) {
+        if (deck.getCards() == null || deck.getCards().isEmpty()) {
+            return null;
+        }
+
+        DeckCard bestCard = null;
+        int bestLevel = -1;
+
+        for (DeckCard dc : deck.getCards()) {
+            String rarity = (dc.getCard().getRarity() != null) ? dc.getCard().getRarity().toLowerCase() : "common";
+            int level = switch (rarity) {
+                case "mythic" -> 4;
+                case "rare" -> 3;
+                case "uncommon" -> 2;
+                case "common" -> 1;
+                default -> 0;
+            };
+
+            if (level > bestLevel) {
+                bestLevel = level;
+                bestCard = dc;
+            }
+        }
+
+        return (bestCard != null) ? bestCard.getCard().getArtCropUri() : null;
     }
 
     private static String resolveDeckCardImage(DeckCard deckCard) {
@@ -234,5 +263,13 @@ public class DeckResponseDTO {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getMainImageUrl() {
+        return mainImageUrl;
+    }
+
+    public void setMainImageUrl(String mainImageUrl) {
+        this.mainImageUrl = mainImageUrl;
     }
 }

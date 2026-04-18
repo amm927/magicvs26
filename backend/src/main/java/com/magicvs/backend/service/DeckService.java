@@ -205,7 +205,35 @@ public class DeckService {
             deck.getFormat() != null ? deck.getFormat().name() : DeckFormat.STANDARD.name(),
             deck.getTotalCards(),
             deck.getUpdatedAt(),
-            deck.getPublic()
+            deck.getPublic(),
+            getBestArtCrop(deck)
         );
+    }
+
+    private String getBestArtCrop(Deck deck) {
+        if (deck.getCards() == null || deck.getCards().isEmpty()) {
+            return null;
+        }
+
+        com.magicvs.backend.model.DeckCard bestCard = null;
+        int bestLevel = -1;
+
+        for (com.magicvs.backend.model.DeckCard dc : deck.getCards()) {
+            String rarity = (dc.getCard().getRarity() != null) ? dc.getCard().getRarity().toLowerCase() : "common";
+            int level = switch (rarity) {
+                case "mythic" -> 4;
+                case "rare" -> 3;
+                case "uncommon" -> 2;
+                case "common" -> 1;
+                default -> 0;
+            };
+
+            if (level > bestLevel) {
+                bestLevel = level;
+                bestCard = dc;
+            }
+        }
+
+        return (bestCard != null) ? bestCard.getCard().getArtCropUri() : null;
     }
 }

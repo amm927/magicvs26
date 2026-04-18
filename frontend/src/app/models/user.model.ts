@@ -2,6 +2,7 @@ export interface PublicUser {
   id: number;
   username: string;
   elo: number;
+  friendTag?: string;
   avatarUrl?: string | null;
   bio?: string;
   stats?: {
@@ -16,6 +17,7 @@ export interface PublicUser {
     id: number;
     name: string;
     format: string;
+    totalCards: number;
     colors: string[];
     imageUrl: string | null;
   }>;

@@ -75,4 +75,15 @@ export class UserProfileComponent implements OnInit {
   isFollowing(userId: number): boolean {
     return this.friendshipService.isFollowing(userId);
   }
+
+  getColorName(code: string): string {
+    const names: Record<string, string> = {
+      'W': 'Blanco',
+      'U': 'Azul',
+      'B': 'Negro',
+      'R': 'Rojo',
+      'G': 'Verde'
+    };
+    return names[code] || code;
+  }
 }

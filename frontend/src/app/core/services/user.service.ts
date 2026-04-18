@@ -29,6 +29,7 @@ export class UserService {
         return {
           id: profile.id,
           username: profile.username,
+          friendTag: profile.friendTag,
           elo: profile.eloRating,
           avatarUrl: profile.avatarUrl,
           bio: profile.bio,
@@ -44,8 +45,9 @@ export class UserService {
             id: d.id,
             name: d.name,
             format: d.formatName,
+            totalCards: d.totalCards,
             colors: d.colors,
-            imageUrl: null // Placeholder as not in DTO
+            imageUrl: d.mainImageUrl || null
           }))
         };
       })
