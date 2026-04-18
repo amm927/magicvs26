@@ -88,15 +88,23 @@ public class CardController {
             @RequestParam(defaultValue = "24") int size) {
 
         String normalizedName = name == null ? "" : name.trim();
-        String normalizedColor = color == null ? "" : color.trim();
+        String normalizedColors = color == null ? "" : color.trim().toUpperCase();
         String normalizedType = type == null ? "" : type.trim();
+
+        boolean noColorFilter = normalizedColors.isEmpty();
+        boolean needsW = normalizedColors.contains("W");
+        boolean needsU = normalizedColors.contains("U");
+        boolean needsB = normalizedColors.contains("B");
+        boolean needsR = normalizedColors.contains("R");
+        boolean needsG = normalizedColors.contains("G");
+        boolean needsC = normalizedColors.contains("C");
 
         int safePage = Math.max(0, page);
         int safeSize = Math.max(1, Math.min(size, 50));
 
         Pageable pageable = PageRequest.of(safePage, safeSize);
         Page<CardSearchResponse> mappedPage = cardRepository
-            .searchProjectedByNameAndFilters(normalizedName, normalizedColor, normalizedType, pageable)
+            .searchProjectedByNameAndFilters(normalizedName, noColorFilter, needsW, needsU, needsB, needsR, needsG, needsC, normalizedType, pageable)
                 .map(card -> new CardSearchResponse(
                         card.getId(),
                 resolveDisplayName(card.getName(), card.getRawJson()),
@@ -110,7 +118,8 @@ public class CardController {
                 ),
                 resolveBackImageUrl(card.getBackFaceNormalImageUri(), card.getBackFaceSmallImageUri()),
                 isDoubleFacedCard(card.getName(), card.getBackFaceNormalImageUri(), card.getBackFaceSmallImageUri()),
-                        resolveColors(card.getColorsJson(), card.getManaCost())
+                        resolveColors(card.getColorsJson(), card.getManaCost()),
+                        card.getRarity()
                 ));
 
         CardSearchPageResponse response = new CardSearchPageResponse(
@@ -250,8 +259,9 @@ public class CardController {
         private String backImageUrl;
         private boolean doubleFaced;
         private List<String> colors;
+        private String rarity;
 
-        public CardSearchResponse(Long id, String name, String manaCost, String type, String imageUrl, String backImageUrl, boolean doubleFaced, List<String> colors) {
+        public CardSearchResponse(Long id, String name, String manaCost, String type, String imageUrl, String backImageUrl, boolean doubleFaced, List<String> colors, String rarity) {
             this.id = id;
             this.name = name;
             this.manaCost = manaCost;
@@ -260,7 +270,11 @@ public class CardController {
             this.backImageUrl = backImageUrl;
             this.doubleFaced = doubleFaced;
             this.colors = colors;
+            this.rarity = rarity;
         }
+
+        public String getRarity() { return rarity; }
+        public void setRarity(String rarity) { this.rarity = rarity; }
 
         public Long getId() {
             return id;

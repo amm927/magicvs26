@@ -31,8 +31,49 @@ export class CardService {
     );
   }
 
+  searchCards(query = '', color = '', type = '', page = 0, size = 20): Observable<CardPage> {
+    const params = new URLSearchParams({
+      name: query,
+      color,
+      type,
+      page: String(page),
+      size: String(size)
+    });
+    return this.http.get<any>(`${this.apiUrl}/search?${params}`).pipe(
+      map(response => this.mapSearchResponseToCardPage(response, page, size))
+    );
+  }
+
   getStats(): Observable<{ totalCards: number; totalSets: number }> {
     return this.http.get<{ totalCards: number; totalSets: number }>(`${this.apiUrl}/stats`);
+  }
+
+  private mapSearchResponseToCardPage(response: any, currentPage: number, size: number): CardPage {
+    const cards = Array.isArray(response.content)
+      ? response.content.map((c: any) => this.mapSearchCardToCard(c))
+      : [];
+    return {
+      cards,
+      totalPages: response.totalPages || 0,
+      totalElements: response.totalElements || 0,
+      currentPage: response.page ?? currentPage,
+      size
+    };
+  }
+
+  private mapSearchCardToCard(card: any): Card {
+    return {
+      id: String(card.id),
+      name: card.name || '',
+      imageUrl: card.imageUrl || '',
+      imageUrl2: card.backImageUrl || '',
+      manaCost: this.parseManaCost(card.manaCost),
+      type: card.type || '',
+      rarity: this.capitalize(card.rarity) || '',
+      oracleText: '',
+      legalities: this.normalizeLegalities([]),
+      price: 0
+    };
   }
 
   private mapResponseToCardPage(response: any, currentPage: number, size: number): CardPage {

@@ -1,10 +1,17 @@
-import { Component, OnInit, inject, signal, HostListener } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, HostListener, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CardService, CardPage } from '../../core/services/card.service';
-import { Card } from '../../models/card.model';
-import { computed } from '@angular/core';
+import { Subject, BehaviorSubject, takeUntil } from 'rxjs';
+import { debounceTime, switchMap } from 'rxjs/operators';
+
+interface FilterState {
+  query: string;
+  color: string;
+  type: string;
+  page: number;
+}
 
 @Component({
   selector: 'app-catalog',
@@ -13,59 +20,93 @@ import { computed } from '@angular/core';
   templateUrl: './catalog.html',
   styleUrl: './catalog.scss'
 })
-export class CatalogComponent implements OnInit {
+export class CatalogComponent implements OnInit, OnDestroy {
   private cardService = inject(CardService);
-  
-  // Data Signals
+  private destroy$ = new Subject<void>();
+  private filterState$ = new BehaviorSubject<FilterState>({ query: '', color: '', type: '', page: 0 });
+
   cardPage = signal<CardPage | null>(null);
   isLoading = signal(true);
-
-  // Pagination signals
   currentPage = signal(0);
   totalPages = signal(0);
 
-  // Filter signals
-  activeMana = signal<string | null>(null);
+  activeMana = signal<string[]>([]);
   activeType = signal('Tipo');
   activeRarity = signal('Rareza');
   searchQuery = signal('');
 
   filteredCards = computed(() => {
-    const pageData = this.cardPage();
-    // Importante: Verifica si 'content' es el nombre correcto en tu CardPage
-    const cards = pageData?.cards || []; 
-    
-    const query = this.searchQuery().toLowerCase().trim();
-    const type = this.activeType();
+    const cards = this.cardPage()?.cards || [];
     const rarity = this.activeRarity();
-    const mana = this.activeMana();
-
-    return cards.filter(card => {
-      // 1. Filtro por texto
-      const matchesQuery = !query || 
-        card.name.toLowerCase().includes(query) || 
-        (card.name && card.name.toLowerCase().includes(query)) || 
-        (card.type && card.type.toLowerCase().includes(query)) ||
-        (card.oracleText && card.oracleText.toLowerCase().includes(query));
-
-      // 2. Filtro por Dropdown de Tipo
-      const matchesType = type === 'Tipo' || card.type === type;
-
-      // 3. Filtro por Dropdown de Rareza
-      const matchesRarity = rarity === 'Rareza' || card.rarity === rarity;
-
-      // 4. Filtro por Maná
-      const matchesMana = !mana || card.manaCost?.includes(mana);
-
-      return matchesQuery && matchesType && matchesRarity && matchesMana;
-    });
+    if (rarity === 'Rareza') return cards;
+    return cards.filter(card => card.rarity === rarity);
   });
 
-  // Dropdown visibility signals
   showTypeDropdown = signal(false);
   showRarityDropdown = signal(false);
+
+  private flippedCardIds = new Set<string>();
+
+  isDoubleFaced(card: any): boolean {
+    return !!card.imageUrl2;
+  }
+
+  isCardFlipped(card: any): boolean {
+    return this.flippedCardIds.has(card.id);
+  }
+
+  toggleCardFace(cardId: string, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.flippedCardIds.has(cardId)) {
+      this.flippedCardIds.delete(cardId);
+    } else {
+      this.flippedCardIds.add(cardId);
+    }
+  }
+
+  private readonly typeMap: Record<string, string> = {
+    'Tipo': '',
+    'Criatura': 'creature',
+    'Instantáneo': 'instant',
+    'Conjuro': 'sorcery',
+    'Encantamiento': 'enchantment',
+    'Artefacto': 'artifact',
+    'Planeswalker': 'planeswalker',
+    'Tierra': 'land'
+  };
+
   ngOnInit(): void {
-    this.loadCards();
+    this.filterState$.pipe(
+      debounceTime(300),
+      switchMap(state => {
+        this.isLoading.set(true);
+        return this.cardService.searchCards(state.query, state.color, state.type, state.page);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe({
+      next: (data) => {
+        this.cardPage.set(data);
+        this.currentPage.set(data.currentPage);
+        this.totalPages.set(data.totalPages);
+        this.isLoading.set(false);
+      },
+      error: () => this.isLoading.set(false)
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  private getFilterState(page = 0): FilterState {
+    return {
+      query: this.searchQuery(),
+      color: this.activeMana().join(','),
+      type: this.typeMap[this.activeType()] ?? '',
+      page
+    };
   }
 
   @HostListener('document:click', ['$event'])
@@ -78,19 +119,21 @@ export class CatalogComponent implements OnInit {
   }
 
   onSearch(event: any): void {
-    const value = event.target.value;
-    this.searchQuery.set(value);
-    this.currentPage.set(0); 
-    this.loadCards(0);
+    this.searchQuery.set(event.target.value);
+    this.filterState$.next(this.getFilterState(0));
   }
 
   toggleMana(mana: string): void {
-    this.activeMana.update(current => current === mana ? null : mana);
+    this.activeMana.update(current =>
+      current.includes(mana) ? current.filter(m => m !== mana) : [...current, mana]
+    );
+    this.filterState$.next(this.getFilterState(0));
   }
 
   selectType(type: string): void {
     this.activeType.set(type);
     this.showTypeDropdown.set(false);
+    this.filterState$.next(this.getFilterState(0));
   }
 
   selectRarity(rarity: string): void {
@@ -99,48 +142,31 @@ export class CatalogComponent implements OnInit {
   }
 
   resetFilters(): void {
-    this.activeMana.set(null);
+    this.activeMana.set([]);
     this.activeType.set('Tipo');
     this.activeRarity.set('Rareza');
     this.searchQuery.set('');
-  }
-
-  loadCards(page = 0): void {
-    this.isLoading.set(true);
-    this.cardService.getCards(page).subscribe({
-      next: (data) => {
-        this.cardPage.set(data);
-        this.currentPage.set(data.currentPage);
-        this.totalPages.set(data.totalPages);
-        this.isLoading.set(false);
-      },
-      error: (err) => {
-        console.error('Error loading cards:', err);
-        this.isLoading.set(false);
-      }
-    });
+    this.filterState$.next(this.getFilterState(0));
   }
 
   nextPage(): void {
     const next = this.currentPage() + 1;
     if (next < this.totalPages()) {
-      this.loadCards(next);
+      this.filterState$.next(this.getFilterState(next));
     }
   }
 
   prevPage(): void {
     const prev = this.currentPage() - 1;
     if (prev >= 0) {
-      this.loadCards(prev);
+      this.filterState$.next(this.getFilterState(prev));
     }
   }
 
   goToPage(page: number | string): void {
     const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
-    if (isNaN(pageNum) || pageNum < 0 || pageNum >= this.totalPages()) {
-      return;
-    }
-    this.loadCards(pageNum);
+    if (isNaN(pageNum) || pageNum < 0 || pageNum >= this.totalPages()) return;
+    this.filterState$.next(this.getFilterState(pageNum));
   }
 
   getManaCostString(manaCost: string[]): string {

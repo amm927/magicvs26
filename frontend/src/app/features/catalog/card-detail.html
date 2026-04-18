@@ -9,6 +9,19 @@
     </a>
   </nav>
 
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-12 items-start">
+    <!-- Left Column: Card Image -->
+    <div class="md:col-span-5 flex justify-center sticky top-24">
+      <div class="relative w-full max-w-sm">
+        <img
+          [src]="card.imageUrl || defaultImageUrl"
+          [alt]="card.name"
+          class="w-full rounded-2xl shadow-2xl shadow-primary/20 hover:scale-[1.02] transition-transform duration-300"
+          (error)="$any($event.target).src = defaultImageUrl"
+        />
+      </div>
+    </div>
+
     <!-- Right Column: Card Details -->
     <div class="md:col-span-7 space-y-10">
       <!-- Header Info -->
@@ -98,6 +111,7 @@
         </button>
       </footer>
     </div>
+  </div>
 
   <!-- Secondary Info (Deck Insights) -->
   <section class="mt-24 pt-12 border-t border-white/5 grid grid-cols-1 md:grid-cols-3 gap-8">
