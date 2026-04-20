@@ -4,6 +4,8 @@ import { filter } from 'rxjs/operators';
 import { ProfileService, ProfileResponse } from '../../features/profile/profile.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { AppNotification, ToastNotification } from '../../models/notification.model';
+import { ToastComponent } from '../../shared/components/toast/toast.component';
+import { UserService } from '../../core/services/user.service';
 
 interface StoredUser {
   id: number;
@@ -13,11 +15,12 @@ interface StoredUser {
   displayName?: string | null;
   friendTag?: string;
   token?: string;
+  isOnline?: boolean;
 }
 
 @Component({
   selector: 'app-main-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastComponent],
   templateUrl: './main-layout.html',
   styleUrl: './main-layout.scss',
 })
@@ -27,6 +30,7 @@ export class MainLayout {
   friendTag: string | null = null;
   avatarUrl: string | null = null;
   manaColor: { name: string; color: string; code: string } | null = null;
+  isOnline = false;
 
   private readonly manaColors = [
     { name: 'Blanco', code: 'W', color: 'f0f2f0' },
@@ -38,6 +42,7 @@ export class MainLayout {
 
   private readonly profileService = inject(ProfileService);
   private readonly notificationService = inject(NotificationService);
+  private readonly userService = inject(UserService);
 
   constructor(private router: Router) {
     this.isLoggedIn = !!localStorage.getItem('user');
@@ -67,6 +72,7 @@ export class MainLayout {
     }
 
   logout(): void {
+    const token = localStorage.getItem('token') || localStorage.getItem('authToken');
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     localStorage.removeItem('authToken');
@@ -74,6 +80,14 @@ export class MainLayout {
     this.notificationService.disconnect();
     this.notificationService.setDropdownOpen(false);
     // redirect to public home (not login)
+    this.isOnline = false;
+    this.displayName = null;
+    this.friendTag = null;
+    this.avatarUrl = null;
+    this.manaColor = null;
+    if (token) {
+      this.userService.logout(token).subscribe();
+    }
     this.router.navigateByUrl('/');
   }
 
@@ -190,6 +204,7 @@ export class MainLayout {
       this.friendTag = null;
       this.avatarUrl = null;
       this.manaColor = null;
+      this.isOnline = false;
       return;
     }
     try {
@@ -204,6 +219,7 @@ export class MainLayout {
         this.displayName = u.username ?? null;
       }
       this.friendTag = (u.friendTag ?? null)?.toString() ?? null;
+      this.isOnline = u.isOnline ?? false;
 
       // Magic Metadata
       this.avatarUrl = u.avatarUrl ?? null;
@@ -220,6 +236,7 @@ export class MainLayout {
       this.friendTag = null;
       this.avatarUrl = null;
       this.manaColor = null;
+      this.isOnline = false;
     }
   }
 
